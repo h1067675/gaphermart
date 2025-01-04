@@ -304,7 +304,3 @@ func (c *Connect) UserGetWithdrawalsHandler(responce http.ResponseWriter, reques
 	responce.WriteHeader(http.StatusOK)
 	responce.Write(body)
 }
-
-func (c *Connect) SystemGetOrdersCalcHandler(responce http.ResponseWriter, request *http.Request) {
-
-}
