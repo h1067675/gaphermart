@@ -40,7 +40,18 @@ func (l Loader) updateOrder(chIn chan struct {
 	defer tx.Commit()
 	for ch := range chIn {
 		if ch.status != "" {
-			_, err = tx.Exec("UPDATE orders SET status = $1, accrual = $2 WHERE Id = $1 AND LinkId = $2", ch.status, ch.accrual)
+			err = l.Depository.OrderStatusUpdate(ch.order, ch.status, ch.accrual, tx)
+			if err != nil {
+				tx.Rollback()
+			}
+
+			var userID int
+			userID, err = l.Depository.OrderUserCheck(ch.order)
+			if err != nil {
+				tx.Rollback()
+			}
+
+			err = l.Depository.UserBalanceUpdate(userID, ch.accrual, 0, tx)
 			if err != nil {
 				tx.Rollback()
 			}

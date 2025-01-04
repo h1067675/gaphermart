@@ -16,9 +16,9 @@ type Storage struct {
 }
 
 // create new storage
-func InitializeStorager(config configurer.Config) *Storage {
+func InitializeStorager(config *configurer.Config) *Storage {
 	var r = Storage{
-		DB: newDB(config.DatabaseURI.String()),
+		DB: newDB(config.GetDatabaseURI()),
 	}
 	if r.DB.Connected {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
@@ -27,7 +27,7 @@ func InitializeStorager(config configurer.Config) *Storage {
 			return nil
 		}
 		logger.Log.Info("connection to the database has been established and verified")
-		if config.ReloadTables {
+		if config.GetReloadTables() {
 			if err := r.dropDBTables(); err != nil {
 				logger.Log.WithError(err).Info("error droping tables in DB")
 			}

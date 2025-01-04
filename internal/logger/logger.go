@@ -17,8 +17,6 @@ func InitializeLogger(format log.Formatter, level log.Level, output io.Writer) *
 	return Log
 }
 
-type Fields log.Fields
-
 type responseData struct {
 	status int
 	size   int

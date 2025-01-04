@@ -13,6 +13,10 @@ import (
 	"github.com/h1067675/gophermart/internal/logger"
 )
 
+type Configurer interface {
+	InitializeConfigurer(server string, db string, system string, reload bool) *Config
+}
+
 // structure of the server settings
 type Config struct {
 	RunAddress           NetAddress
@@ -25,6 +29,22 @@ type Config struct {
 type NetAddress struct {
 	Host string
 	Port int
+}
+
+func (c Config) GetRunAddress() string {
+	return c.RunAddress.String()
+}
+
+func (c Config) GetDatabaseURI() string {
+	return c.DatabaseURI.String()
+}
+
+func (c Config) GetAccrualSystemAddress() string {
+	return c.AccrualSystemAddress.String()
+}
+
+func (c Config) GetReloadTables() bool {
+	return c.ReloadTables
 }
 
 // возвращаем адрес вида host:port
@@ -65,19 +85,8 @@ type EnvConfig struct {
 }
 
 // сreating server settins
-func InitializeConfigurer(server string, db string, system string, reload bool) *Config {
+func (c Config) InitializeConfigurer(server string, db string, system string, reload bool) *Config {
 	var result = Config{ // set defaul settins
-		RunAddress: NetAddress{
-			Host: "localhost",
-			Port: 8080,
-		},
-		DatabaseURI: DatabasePath{
-			Path: "host=127.0.0.1 port=5432 dbname=postgres user=postgres password=12345678 connect_timeout=10 sslmode=prefer",
-		},
-		AccrualSystemAddress: NetAddress{
-			Host: "localhost",
-			Port: 8090,
-		},
 		ReloadTables: reload,
 	}
 	result.RunAddress.Set(server)

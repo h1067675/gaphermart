@@ -20,7 +20,7 @@ const (
 type UserOrders struct {
 	Number     int     `json:"number"`
 	Status     string  `json:"status"`
-	Accrual    float64 `json:"accrual"`
+	Accrual    float64 `json:"accrual,omitempty"`
 	UploadedAt RFCDate `json:"uploaded_at"`
 }
 
@@ -49,7 +49,15 @@ func (s *Storage) OrderUserCheck(order int) (userID int, err error) {
 }
 
 func (s *Storage) OrderNew(user int, order int) bool {
-	_, err := s.DB.Exec("INSERT INTO users_orders (user_id, order_id) VALUES ($1, (INSERT INTO orders (order_number, uploaded_at, status) VALUES ($2,$3,$4) RETURNING id);", user, order, time.Now, OrderNew)
+	var err error
+	row := s.DB.QueryRow("INSERT INTO orders (order_number, status) VALUES ($1,$2) RETURNING id;", order, OrderNew)
+	var id string
+	err = row.Scan(&id)
+	if err != nil {
+		logger.Log.WithError(err).Info("error insert new order into db")
+		return false
+	}
+	_, err = s.DB.Exec("INSERT INTO users_orders (user_id, order_id) VALUES ($1, $2);", user, id)
 	if err != nil {
 		logger.Log.WithError(err).Error("error inserting order to orders")
 		return false
@@ -60,7 +68,7 @@ func (s *Storage) OrderNew(user int, order int) bool {
 func (s *Storage) OrderGetUserOrders(user int) (orders []UserOrders, err error) {
 	var rows *sql.Rows
 	var order UserOrders
-	rows, err = s.DB.Query("SELECT order_number, uploaded_at, accrual, status FROM users_orders WHERE order_id IN (SELECT order_id FROM user_orders WHERE user_id = $1) ORDER BY uploaded_at DESC", user)
+	rows, err = s.DB.Query("SELECT order_number, uploaded_at, accrual, status FROM orders WHERE id IN (SELECT order_id FROM users_orders WHERE user_id = $1) ORDER BY uploaded_at DESC", user)
 	if err != nil {
 		logger.Log.WithError(err).Error("error getting data from the database")
 		return nil, err
@@ -70,7 +78,7 @@ func (s *Storage) OrderGetUserOrders(user int) (orders []UserOrders, err error) 
 		rows.Err()
 	}()
 	for rows.Next() {
-		err = rows.Scan(&order.Number, &order.UploadedAt, &order.Accrual, &order.Status)
+		err = rows.Scan(&order.Number, &order.UploadedAt.Time, &order.Accrual, &order.Status)
 		if err != nil {
 			logger.Log.WithError(err).Error("error scanning sql.Rows")
 			return nil, err
@@ -103,4 +111,14 @@ func (s Storage) OrderGetOrdersInProcess() (orders []int, err error) {
 		orders = append(orders, order)
 	}
 	return orders, nil
+}
+
+func (s Storage) OrderStatusUpdate(order int, status string, accrual float64, tx *sql.Tx) (err error) {
+	_, err = tx.Exec("UPDATE orders SET status = $2, accrual = $3 WHERE Id = $1", order, status, accrual)
+	if err != nil {
+		logger.Log.WithError(err).Error("error updating the order in the database")
+		return err
+	}
+
+	return nil
 }

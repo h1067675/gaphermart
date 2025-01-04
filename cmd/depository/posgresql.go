@@ -25,7 +25,7 @@ var dbTables = []dbTable{
 		pgxQuery: `CREATE TABLE users (
 				id SERIAL PRIMARY KEY,
 				login TEXT UNIQUE, 
-				created_at TIMESTAMP, 
+				created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
 				hash_password TEXT
 				);`,
 	},
@@ -33,9 +33,9 @@ var dbTables = []dbTable{
 		table: "orders",
 		pgxQuery: `CREATE TABLE orders (
 				id SERIAL PRIMARY KEY,
-				order_number INTEGER UNIQUE,
-				uploaded_at TIMESTAMP, 
-				accrual DOUBLE PRECISION, 
+				order_number NUMERIC UNIQUE,
+				uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+				accrual DOUBLE PRECISION DEFAULT 0.0, 
 				status TEXT
 				);`,
 	},
@@ -50,19 +50,19 @@ var dbTables = []dbTable{
 		table: "users_balance",
 		pgxQuery: `CREATE TABLE users_balance (
 				user_id INTEGER UNIQUE, 
-				balance DOUBLE PRECISION, 
-				withdrawal DOUBLE PRECISION, 
+				balance DOUBLE PRECISION DEFAULT 0.0, 
+				withdrawal DOUBLE PRECISION DEFAULT 0.0
 				);`,
 	},
 	{
 		table: "users_transactions",
 		pgxQuery: `CREATE TABLE users_transactions (
 				user_id INTEGER, 
-				order_id INTEGER,
-				processed_at TIMESTAMP, 
-				sum DOUBLE PRECISION,
+				order_id NUMERIC,
+				processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+				sum DOUBLE PRECISION DEFAULT 0.0,
 				withdrawal BOOL,
-				balance DOUBLE PRECISION, 
+				balance DOUBLE PRECISION DEFAULT 0.0
 				);`,
 	},
 }

@@ -3,9 +3,9 @@ package depository
 import (
 	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/h1067675/gophermart/internal/logger"
 )
@@ -24,11 +24,11 @@ type UserWithDrawals struct {
 var ErrInsufficientBalance = errors.New("insufficient balance")
 
 // check exist login
-func (s Storage) UserCheckLogin(login string) bool {
+func (s Storage) UserCheckExistLogin(login string) bool {
 	var id int
 	row := s.DB.QueryRow("SELECT id FROM users WHERE login = $1", login)
-	err := row.Scan(id)
-	return err != nil
+	err := row.Scan(&id)
+	return err == nil
 }
 
 // get crypto password
@@ -39,14 +39,21 @@ func cryptPassword(pass string) (string, error) {
 		logger.Log.WithError(err).Info("error crypto password")
 		return "", err
 	}
-	return string(h.Sum(nil)), nil
+	return base64.StdEncoding.EncodeToString([]byte(h.Sum(nil))), nil
 }
 
 // register new user
 func (s Storage) UserRegister(login string, pass string) bool {
 	cryptPass, err := cryptPassword(pass)
 	if err == nil && cryptPass != "" {
-		_, err := s.DB.Exec("INSERT INTO users_balance (user_id, balance, withdrawal) VALUES ((INSERT INTO users (login, create_at, hash_password) VALUES ($1,$2,$3) RETURNING id), 0,0);", login, time.Now, cryptPass)
+		row := s.DB.QueryRow("INSERT INTO users (login, hash_password) VALUES ($1, $2) RETURNING id;", login, cryptPass)
+		var id string
+		err = row.Scan(&id)
+		if err != nil {
+			logger.Log.WithError(err).Info("error insert new user into db")
+			return false
+		}
+		_, err = s.DB.Exec("INSERT INTO users_balance (user_id, balance, withdrawal) VALUES ($1, 0, 0);", id)
 		if err != nil {
 			logger.Log.WithError(err).Info("error insert new user into db")
 			return false
@@ -91,7 +98,7 @@ func (s Storage) UserGetBalance(userID int) (UserBalance, error) {
 	return balance, nil
 }
 
-// withdrawal operation
+// transaction
 func (s Storage) UserWithdrawal(userID int, order int, sum float64) error {
 	balance, err := s.UserGetBalance(userID)
 	if err != nil {
@@ -107,18 +114,15 @@ func (s Storage) UserWithdrawal(userID int, order int, sum float64) error {
 		logger.Log.WithError(err).Error("database error")
 		return err
 	}
-	defer tx.Commit()
-	_, err = tx.Exec("INSERT users_transactions (user_id, order_id,	processed_at, sum, withdrawal, balance) VALUES ($1, $2, $3, $4, $5, $6)", userID, order, time.Now, sum, true, balance.Balance-sum)
+	_, err = tx.Exec("INSERT INTO users_transactions (user_id, order_id, sum, withdrawal, balance) VALUES ($1, $2, $3, $4, $5)", userID, order, sum, true, balance.Balance-sum)
 	if err != nil {
 		tx.Rollback()
 		logger.Log.WithError(err).Error("database writing error")
 		return err
 	}
-	_, err = tx.Exec("UPDATE users_balance SET balance = $1, withdrawal = $2 WHERE Id = $3", balance.Balance-sum, balance.Withdrawn+sum)
+	err = s.UserBalanceUpdate(userID, -sum, sum, tx)
 	if err != nil {
 		tx.Rollback()
-		logger.Log.WithError(err).Error("database writing error")
-		return err
 	}
 	tx.Commit()
 	return nil
@@ -128,7 +132,7 @@ func (s Storage) UserWithdrawal(userID int, order int, sum float64) error {
 func (s Storage) UserGetWithdrawals(userID int) (withdrawals []UserWithDrawals, err error) {
 	var rows *sql.Rows
 	var withdrawal UserWithDrawals
-	rows, err = s.DB.Query("SELECT order_id, sum, processed_at FROM users_transactions WHERE user_id = $1 ORDER BY uploaded_at DESC", userID)
+	rows, err = s.DB.Query("SELECT order_id, sum, processed_at FROM users_transactions WHERE user_id = $1 ORDER BY processed_at DESC", userID)
 	if err != nil {
 		logger.Log.WithError(err).Error("error getting data from the database")
 		return nil, err
@@ -138,7 +142,7 @@ func (s Storage) UserGetWithdrawals(userID int) (withdrawals []UserWithDrawals, 
 		rows.Err()
 	}()
 	for rows.Next() {
-		err = rows.Scan(&withdrawal.Order, &withdrawal.Sum, &withdrawal.Processed)
+		err = rows.Scan(&withdrawal.Order, &withdrawal.Sum, &withdrawal.Processed.Time)
 		if err != nil {
 			logger.Log.WithError(err).Error("error scanning sql.Rows")
 			return nil, err
@@ -146,4 +150,14 @@ func (s Storage) UserGetWithdrawals(userID int) (withdrawals []UserWithDrawals, 
 		withdrawals = append(withdrawals, withdrawal)
 	}
 	return withdrawals, nil
+}
+
+func (s Storage) UserBalanceUpdate(user int, balance float64, withdrawal float64, tx *sql.Tx) (err error) {
+	_, err = tx.Exec("UPDATE users_balance SET balance = balance + $2, withdrawal = withdrawal + $3 WHERE user_id = $1", user, balance, withdrawal)
+	if err != nil {
+		logger.Log.WithError(err).Error("error updating user balance in the database")
+		return err
+	}
+
+	return err
 }

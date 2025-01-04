@@ -24,10 +24,11 @@ type Connector interface {
 
 func main() {
 	var logger = logger.InitializeLogger(&log.JSONFormatter{}, log.InfoLevel, os.Stdout)
-	var configurer = configurer.InitializeConfigurer("127.0.0.1:8080", "host=127.0.0.1 port=5432 dbname=postgres user=postgres password=12345678 connect_timeout=10 sslmode=prefer", "127.0.0.1:8090", false)
-	var depositary = depository.InitializeStorager(*configurer)
-	var connector = InitializeRouter(depositary, configurer)
-	var loader = loader.InitializeLoader(depositary, configurer.AccrualSystemAddress.String(), time.Second*5)
+	var config configurer.Config
+	conf := config.InitializeConfigurer("127.0.0.1:8080", "host=127.0.0.1 port=5432 dbname=postgres user=postgres password=12345678 connect_timeout=10 sslmode=prefer", "127.0.0.1:8090", false)
+	var depositary = depository.InitializeStorager(conf)
+	var connector = InitializeRouter(depositary, conf)
+	var loader = loader.InitializeLoader(depositary, conf.GetAccrualSystemAddress(), time.Second*5)
 	go loader.StartLoader()
 	logger.Info("loader is running")
 	connector.StartServer()

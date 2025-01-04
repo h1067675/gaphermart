@@ -58,8 +58,8 @@ func (c *Connect) Route() chi.Router {
 }
 
 func (c *Connect) StartServer() error {
-	if err := http.ListenAndServe(c.Config.RunAddress.String(), c.Route()); err != nil {
-		logger.Log.WithError(err).Errorf("error starting the server with a network address %s", c.Config.RunAddress.String())
+	if err := http.ListenAndServe(c.Config.GetRunAddress(), c.Route()); err != nil {
+		logger.Log.WithError(err).Errorf("error starting the server with a network address %s", c.Config.GetRunAddress())
 		return err
 	}
 	return nil
