@@ -25,8 +25,8 @@ func (c *Connect) CookieAuthorizationMiddleware(next http.Handler) http.Handler 
 			if err != nil {
 				logger.Log.WithError(err).Error("user is not logged")
 			}
-			ctx = context.WithValue(request.Context(), KeyUserID, userid)
 		}
+		ctx = context.WithValue(request.Context(), KeyUserID, userid)
 		next.ServeHTTP(response, request.WithContext(ctx))
 	})
 }
