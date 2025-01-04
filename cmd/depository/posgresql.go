@@ -82,6 +82,7 @@ func (s *Storage) createDBTables() error {
 	var err error
 	for _, t := range dbTables {
 		if !s.checkLinksDBTable(t.table) {
+			logger.Log.WithError(err).Infof("try to create %s table", t.table)
 			_, err = s.DB.Exec(t.pgxQuery)
 			if err != nil {
 				logger.Log.WithError(err).Infof("the %s table could not be created", t.table)
