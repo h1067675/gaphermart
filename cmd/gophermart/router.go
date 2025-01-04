@@ -31,7 +31,6 @@ func InitializeRouter(dep *depository.Storage, conf *configurer.Config) Connect 
 
 // Routing http requests to edpoints
 func (c *Connect) Route() chi.Router {
-	c.Router = chi.NewRouter()
 	// Use all middleware-functions
 	c.Router.Use(c.CookieAuthorizationMiddleware)
 	c.Router.Use(compress.CompressHandler)
@@ -47,9 +46,7 @@ func (c *Connect) Route() chi.Router {
 			})
 			r.Route("/orders", func(r chi.Router) {
 				r.Post("/", c.UserLoadOrdersHandler) // POST request for load user order to calculate
-			})
-			r.Route("/orders", func(r chi.Router) {
-				r.Post("/", c.UserGetOrdersHandler) // GET request for load user order to show list
+				r.Get("/", c.UserGetOrdersHandler)   // GET request for load user order to show list
 			})
 			r.Route("/balance", func(r chi.Router) {
 				r.Post("/", c.UserGetBalanceHandler) // GET request for get user balance
