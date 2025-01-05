@@ -115,7 +115,7 @@ func (s *Storage) checkLinksDBTable(table string) bool {
 func (s *Storage) dropDBTables() error {
 	var err error
 	for _, t := range dbTables {
-		_, err = s.DB.Query(fmt.Sprintf("DROP TABLE %s;", t.table))
+		_, err = s.DB.Exec(fmt.Sprintf("DROP TABLE %s;", t.table))
 		if err != nil {
 			logger.Log.WithError(err).Infof("the %s table could not be droped", t.table)
 			return err
