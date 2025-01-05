@@ -165,6 +165,6 @@ func (s Storage) UserBalanceUpdate(user int, balance float64, withdrawal float64
 		logger.Log.WithError(err).Error("error updating user balance in the database")
 		return err
 	}
-
+	logger.Log.Debug(fmt.Sprintf("DB query: UPDATE users_balance SET balance = balance + %v, withdrawal = withdrawal + %v WHERE user_id = %v", balance, withdrawal, user))
 	return err
 }
