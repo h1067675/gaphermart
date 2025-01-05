@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -62,7 +61,7 @@ func (c *Connect) Route() chi.Router {
 			})
 		})
 	})
-	logger.Log.Info(fmt.Sprintf("Server is running %s", c.Config.GetRunAddress()))
+	logger.Log.Infof("Server is running %s", c.Config.GetRunAddress())
 	return c.Router
 }
 

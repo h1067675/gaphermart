@@ -45,7 +45,7 @@ func (s *Storage) OrderUserCheck(order int) (userID int, err error) {
 		logger.Log.WithError(err).Error("error getting data from the database")
 		return -1, err
 	}
-	logger.Log.Debug(fmt.Sprintf("SELECT user_id FROM users_orders WHERE order_id = (SELECT id FROM orders WHERE order_number = %v)", order))
+	logger.Log.Infof("SELECT user_id FROM users_orders WHERE order_id = (SELECT id FROM orders WHERE order_number = %v)", order)
 	return userID, nil
 }
 
@@ -120,6 +120,6 @@ func (s Storage) OrderStatusUpdate(order int, status string, accrual float64, tx
 		logger.Log.WithError(err).Error("error updating the order in the database")
 		return err
 	}
-	logger.Log.Debug(fmt.Sprintf("DB query: UPDATE orders SET status = %s, accrual = %v WHERE order_number = %v", status, accrual, order))
+	logger.Log.Infof("DB query: UPDATE orders SET status = %s, accrual = %v WHERE order_number = %v", status, accrual, order)
 	return nil
 }

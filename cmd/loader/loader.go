@@ -34,15 +34,14 @@ func (l Loader) updateOrder(chIn chan struct {
 	status  string
 	accrual float64
 }) {
-	tx, err := l.Depository.DB.Begin()
-	if err != nil {
-		return
-	}
-	logger.Log.Infof("loader: DB transaction begin")
 	for ch := range chIn {
 		logger.Log.Infof("loader: data is received from the channel")
+		tx, err := l.Depository.DB.Begin()
+		if err != nil {
+			return
+		}
+		logger.Log.Infof("loader: DB transaction begin")
 		if ch.status != "" {
-			logger.Log.Infof("loader: updating DB")
 			err = l.Depository.OrderStatusUpdate(ch.order, ch.status, ch.accrual, tx)
 			if err != nil {
 				tx.Rollback()
@@ -58,8 +57,8 @@ func (l Loader) updateOrder(chIn chan struct {
 				tx.Rollback()
 			}
 		}
+		tx.Commit()
 	}
-	tx.Commit()
 }
 
 type responseCalculator struct {

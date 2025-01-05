@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -83,26 +82,26 @@ func (c *Connect) UserRegisterHandler(response http.ResponseWriter, request *htt
 		return
 	}
 	if c.Depository.UserCheckExistLogin(register.Login) {
-		logger.Log.Info(fmt.Sprintf("login %s alredy exist", register.Login))
+		logger.Log.Infof("login %s alredy exist", register.Login)
 		response.WriteHeader(http.StatusConflict)
 		return
 	}
 	userID, err := c.Depository.UserRegister(register.Login, register.Password)
 	if err != nil || userID < 1 {
-		logger.Log.Info(fmt.Sprintf("error registration user %s", register.Login))
+		logger.Log.Infof("error registration user %s", register.Login)
 		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	logger.Log.Info(fmt.Sprintf("user %s is register", register.Login))
+	logger.Log.Infof("user %s is register", register.Login)
 	token, err := authorization.SetToken(userID)
 	if err != nil {
-		logger.Log.Info(fmt.Sprintf("error creating token for user %s", register.Login))
+		logger.Log.Infof("error creating token for user %s", register.Login)
 		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	setAuthirizationCookie(response, token)
-	logger.Log.Info(fmt.Sprintf("user %s is logined", register.Login))
+	logger.Log.Infof("user %s is logined", register.Login)
 	response.WriteHeader(http.StatusOK)
 }
 
@@ -131,7 +130,7 @@ func (c *Connect) UserLoginHandler(response http.ResponseWriter, request *http.R
 		return
 	}
 	setAuthirizationCookie(response, token)
-	logger.Log.Info(fmt.Sprintf("user %s is logined", loginUser.Login))
+	logger.Log.Infof("user %s is logined", loginUser.Login)
 	response.WriteHeader(http.StatusOK)
 }
 
