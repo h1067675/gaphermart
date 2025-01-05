@@ -670,8 +670,11 @@ func TestUserLoadOrdersHandler(t *testing.T) {
 			var userID int
 			userID, _ = connector.Depository.UserAuthorization(test.login.login, test.login.password)
 			b := strings.NewReader(test.req.body)
+
+			request := httptest.NewRequest(http.MethodPost, test.req.handler, b)
 			ctx := context.WithValue(context.TODO(), KeyUserID, userID)
-			request := httptest.NewRequestWithContext(ctx, http.MethodPost, test.req.handler, b)
+			request = request.WithContext(ctx)
+
 			request.Header.Add("Content-Type", test.req.contentType)
 			w := httptest.NewRecorder()
 			h := http.HandlerFunc(connector.UserLoadOrdersHandler)
@@ -834,8 +837,9 @@ func TestUserGetOrdersHandler(t *testing.T) {
 			// login user
 			var userID int
 			userID, _ = connector.Depository.UserAuthorization(test.login.login, test.login.password)
+			request := httptest.NewRequest(http.MethodPost, test.req.handler, nil)
 			ctx := context.WithValue(context.TODO(), KeyUserID, userID)
-			request := httptest.NewRequestWithContext(ctx, http.MethodPost, test.req.handler, nil)
+			request = request.WithContext(ctx)
 			w := httptest.NewRecorder()
 			h := http.HandlerFunc(connector.UserGetOrdersHandler)
 			h(w, request)
@@ -983,8 +987,11 @@ func TestUserGetBalanceHandler(t *testing.T) {
 			// login user
 			var userID int
 			userID, _ = connector.Depository.UserAuthorization(test.login.login, test.login.password)
+
+			request := httptest.NewRequest(http.MethodPost, test.req.handler, nil)
 			ctx := context.WithValue(context.TODO(), KeyUserID, userID)
-			request := httptest.NewRequestWithContext(ctx, http.MethodPost, test.req.handler, nil)
+			request = request.WithContext(ctx)
+
 			w := httptest.NewRecorder()
 			h := http.HandlerFunc(connector.UserGetBalanceHandler)
 			h(w, request)
@@ -1178,8 +1185,11 @@ func TestUserGetBalanceWithdrawHandler(t *testing.T) {
 			var userID int
 			userID, _ = connector.Depository.UserAuthorization(test.login.login, test.login.password)
 			b := strings.NewReader(test.req.body)
+
+			request := httptest.NewRequest(http.MethodPost, test.req.handler, b)
 			ctx := context.WithValue(context.TODO(), KeyUserID, userID)
-			request := httptest.NewRequestWithContext(ctx, http.MethodPost, test.req.handler, b)
+			request = request.WithContext(ctx)
+
 			w := httptest.NewRecorder()
 			h := http.HandlerFunc(connector.UserGetBalanceWithdrawHandler)
 			h(w, request)
@@ -1351,8 +1361,11 @@ func TestUserGetWithdrawalsHandler(t *testing.T) {
 			// login user
 			var userID int
 			userID, _ = connector.Depository.UserAuthorization(test.login.login, test.login.password)
+
+			request := httptest.NewRequest(http.MethodPost, test.req.handler, nil)
 			ctx := context.WithValue(context.TODO(), KeyUserID, userID)
-			request := httptest.NewRequestWithContext(ctx, http.MethodPost, test.req.handler, nil)
+			request = request.WithContext(ctx)
+
 			w := httptest.NewRecorder()
 			h := http.HandlerFunc(connector.UserGetWithdrawalsHandler)
 			h(w, request)
