@@ -3,6 +3,7 @@ package loader
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -178,11 +179,13 @@ func (l Loader) getOrderStatusFromServerAPI(chDone chan struct{}, inChan chan st
 		case <-chDone:
 			return
 		case in := <-inChan:
+			logger.Log.Info(fmt.Sprintf("loader: query -> GET %s/api/orders/%v", l.Server, in.order))
 			body, status, err := l.Client.GET(l.Server, "/api/orders/", in.order)
 			if err != nil {
-				logger.Log.WithError(err).Error("database error")
+				logger.Log.WithError(err).Error("error getting status from outer sistem")
 				return
 			}
+			logger.Log.Info(fmt.Sprintf("loader: answer <- get response with status %v and body %s", status, string(body)))
 			if status == http.StatusNoContent {
 				chResult <- struct {
 					order   int
@@ -216,10 +219,12 @@ func (l Loader) getOrderStatusFromServerAPI(chDone chan struct{}, inChan chan st
 }
 func (l Loader) StartLoader() {
 	for {
+		logger.Log.Info("loader: checking orders to update")
 		orders, err := l.Depository.OrderGetOrdersInProcess()
 		if err != nil {
-			logger.Log.WithError(err).Error("database error")
+			logger.Log.WithError(err).Error("loader: database error")
 		} else {
+			logger.Log.Info("loader: get orders for upload statuses", orders)
 			l.UpdateOrdersStatuses(orders)
 		}
 		time.Sleep(l.Periodicity)
