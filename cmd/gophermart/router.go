@@ -49,10 +49,10 @@ func (c *Connect) Route() chi.Router {
 				r.Get("/", c.UserGetOrdersHandler)   // GET request for load user order to show list
 			})
 			r.Route("/balance", func(r chi.Router) {
-				r.Post("/", c.UserGetBalanceHandler) // GET request for get user balance
+				r.Get("/", c.UserGetBalanceHandler) // GET request for get user balance
 			})
 			r.Route("/withdrawals", func(r chi.Router) {
-				r.Post("/", c.UserGetWithdrawalsHandler) // GET request for get user withdrawals
+				r.Get("/", c.UserGetWithdrawalsHandler) // GET request for get user withdrawals
 			})
 		})
 		r.Route("/api/user/balance", func(r chi.Router) {
