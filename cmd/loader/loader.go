@@ -3,7 +3,6 @@ package loader
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 	"sync"
@@ -39,14 +38,15 @@ func (l Loader) updateOrder(chIn chan struct {
 	if err != nil {
 		return
 	}
-	defer tx.Commit()
+	logger.Log.Infof("loader: DB transaction begin")
 	for ch := range chIn {
+		logger.Log.Infof("loader: data is received from the channel")
 		if ch.status != "" {
+			logger.Log.Infof("loader: updating DB")
 			err = l.Depository.OrderStatusUpdate(ch.order, ch.status, ch.accrual, tx)
 			if err != nil {
 				tx.Rollback()
 			}
-
 			var userID int
 			userID, err = l.Depository.OrderUserCheck(ch.order)
 			if err != nil {
@@ -180,13 +180,13 @@ func (l Loader) getOrderStatusFromServerAPI(chDone chan struct{}, inChan chan st
 		case <-chDone:
 			return
 		case in := <-inChan:
-			logger.Log.Info(fmt.Sprintf("loader: query -> GET %s/api/orders/%v", l.Server, in.order))
+			logger.Log.Infof("loader: query - GET %s/api/orders/%v", l.Server, in.order)
 			body, status, err := l.Client.GET(l.Server, "/api/orders/", in.order)
 			if err != nil {
 				logger.Log.WithError(err).Error("error getting status from outer sistem")
 				return
 			}
-			logger.Log.Info(fmt.Sprintf("loader: answer <- get response with status %v and body %s", status, string(body)))
+			logger.Log.Infof("loader: answer - get response with status %v and body %s", status, string(body))
 			if status == http.StatusNoContent {
 				chResult <- struct {
 					order   int
@@ -213,6 +213,7 @@ func (l Loader) getOrderStatusFromServerAPI(chDone chan struct{}, inChan chan st
 				}
 				if order != in.order {
 					logger.Log.Info("loader: order number from the external service does not match the internal number")
+					return
 				}
 				chResult <- struct {
 					order   int
