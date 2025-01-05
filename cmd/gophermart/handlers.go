@@ -220,6 +220,7 @@ func (c *Connect) UserGetOrdersHandler(response http.ResponseWriter, request *ht
 	}
 	response.Header().Add("Content-Type", "application/json")
 	response.WriteHeader(http.StatusOK)
+	logger.Log.Info("response write body:", string(body))
 	response.Write(body)
 }
 
@@ -243,6 +244,7 @@ func (c *Connect) UserGetBalanceHandler(response http.ResponseWriter, request *h
 	}
 	response.Header().Add("Content-Type", "application/json")
 	response.WriteHeader(http.StatusOK)
+	logger.Log.Info("response write body:", string(body))
 	response.Write(body)
 }
 
@@ -318,5 +320,6 @@ func (c *Connect) UserGetWithdrawalsHandler(response http.ResponseWriter, reques
 	}
 	response.Header().Add("Content-Type", "application/json")
 	response.WriteHeader(http.StatusOK)
+	logger.Log.Info("response write body:", string(body))
 	response.Write(body)
 }

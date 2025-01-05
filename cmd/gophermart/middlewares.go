@@ -23,7 +23,7 @@ func (c *Connect) CookieAuthorizationMiddleware(next http.Handler) http.Handler 
 		if err != nil {
 			logger.Log.Info("cookie is not found. User is not logged")
 		} else {
-			logger.Log.Info("checking authorization by token from getting cookie")
+			logger.Log.Info("checking authorization by token from cookie")
 			userid, err = authorization.CheckToken(cookie.Value)
 			if err != nil {
 				logger.Log.WithError(err).Error("user is not logged")
