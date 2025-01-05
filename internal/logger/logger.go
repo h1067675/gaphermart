@@ -38,7 +38,7 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.responseData.status = statusCode
 }
 
-func ResponceLogging(next http.Handler) http.Handler {
+func ResponseLogging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(responce http.ResponseWriter, request *http.Request) {
 		start := time.Now()
 		responseData := responseData{
@@ -53,12 +53,12 @@ func ResponceLogging(next http.Handler) http.Handler {
 		next.ServeHTTP(&newResp, request)
 
 		Log.WithFields(log.Fields{
-			"URL":            request.URL,
 			"method":         request.Method,
+			"URL":            request.URL.Path,
+			"status":         newResp.responseData.status,
+			"cookies":        request.Cookies(),
 			"execution time": time.Since(start),
 			"size":           newResp.responseData.size,
-			"status":         newResp.responseData.status,
-			"cookie":         request.Cookies(),
 		}).Info("User request")
 	})
 }

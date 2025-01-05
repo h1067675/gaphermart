@@ -32,7 +32,7 @@ func CheckToken(tokenString string) (int, error) {
 		logger.Log.WithError(err).Info("token is not valid")
 		return -1, err
 	}
-	logger.Log.Info("user id restore from token", cl.UserID)
+	logger.Log.Info(fmt.Sprintf("user id=%v restore from token", cl.UserID))
 	return cl.UserID, nil
 }
 
@@ -46,7 +46,7 @@ func SetToken(id int) (string, error) {
 		logger.Log.WithError(err).Info("error token generate")
 		return "", err
 	}
-	logger.Log.Info("create new token", cl.UserID)
+	logger.Log.Info(fmt.Sprintf("create new token, user id=%v", cl.UserID))
 	return tokenString, nil
 }
 

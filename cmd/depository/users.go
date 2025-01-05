@@ -43,24 +43,31 @@ func cryptPassword(pass string) (string, error) {
 }
 
 // register new user
-func (s Storage) UserRegister(login string, pass string) bool {
+func (s Storage) UserRegister(login string, pass string) (int, error) {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		logger.Log.WithError(err).Info("error creating DB transaction")
+		return -1, err
+	}
 	cryptPass, err := cryptPassword(pass)
 	if err == nil && cryptPass != "" {
-		row := s.DB.QueryRow("INSERT INTO users (login, hash_password) VALUES ($1, $2) RETURNING id;", login, cryptPass)
-		var id string
+		row := tx.QueryRow("INSERT INTO users (login, hash_password) VALUES ($1, $2) RETURNING id;", login, cryptPass)
+		var id int
 		err = row.Scan(&id)
 		if err != nil {
 			logger.Log.WithError(err).Info("error insert new user into db")
-			return false
+			tx.Rollback()
+			return -1, err
 		}
 		_, err = s.DB.Exec("INSERT INTO users_balance (user_id, balance, withdrawal) VALUES ($1, 0, 0);", id)
 		if err != nil {
-			logger.Log.WithError(err).Info("error insert new user into db")
-			return false
+			logger.Log.WithError(err).Info("error insert user into balance table")
+			tx.Rollback()
+			return -1, err
 		}
-		return true
+		return id, nil
 	}
-	return false
+	return -1, err
 }
 
 func (s *Storage) UserAuthorization(login string, password string) (userID int, err error) {

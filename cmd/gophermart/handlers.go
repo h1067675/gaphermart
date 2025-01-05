@@ -58,176 +58,192 @@ func (u *userLoginJSON) parse(request http.Request) error {
 	return err
 }
 
-// user resister handler
-func (c *Connect) UserRegisterHandler(responce http.ResponseWriter, request *http.Request) {
-	if !strings.Contains(request.Header.Get("Content-Type"), "application/json") {
-		responce.WriteHeader(http.StatusBadRequest)
-	}
-	var register userLoginJSON
-	if err := register.parse(*request); err != nil {
-		if errors.Is(err, errLoginIsEmpty) || errors.Is(err, errPasswordIsEmpty) || errors.Is(err, errBodyIsEmpty) {
-			responce.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		responce.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	if c.Depository.UserCheckExistLogin(register.Login) {
-		logger.Log.Info(fmt.Sprintf("login %s alredy exist", register.Login))
-		responce.WriteHeader(http.StatusConflict)
-		return
-	}
-	if c.Depository.UserRegister(register.Login, register.Password) {
-		logger.Log.Info(fmt.Sprintf("user %s is register", register.Login))
-		responce.WriteHeader(http.StatusOK)
-		return
-	}
-	responce.WriteHeader(http.StatusInternalServerError)
-}
-
-// user login handler
-func (c *Connect) UserLoginHandler(responce http.ResponseWriter, request *http.Request) {
-	if !strings.Contains(request.Header.Get("Content-Type"), "application/json") {
-		responce.WriteHeader(http.StatusBadRequest)
-	}
-	var loginUser userLoginJSON
-	if err := loginUser.parse(*request); err != nil {
-		logger.Log.WithError(err).Info("error json parsing")
-		if errors.Is(err, errLoginIsEmpty) || errors.Is(err, errPasswordIsEmpty) || errors.Is(err, errBodyIsEmpty) {
-			responce.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		responce.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	token, err := authorization.UserAuthorization(c.Depository, loginUser.Login, loginUser.Password)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			responce.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		responce.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+func setAuthirizationCookie(response http.ResponseWriter, token string) {
 	cookie := &http.Cookie{
 		Name:   "token",
 		Value:  token,
 		MaxAge: 60 * 60 * 24,
 		Path:   "/",
 	}
-	http.SetCookie(responce, cookie)
-	responce.WriteHeader(http.StatusOK)
+	http.SetCookie(response, cookie)
+}
+
+// user resister handler
+func (c *Connect) UserRegisterHandler(response http.ResponseWriter, request *http.Request) {
+	if !strings.Contains(request.Header.Get("Content-Type"), "application/json") {
+		response.WriteHeader(http.StatusBadRequest)
+	}
+	var register userLoginJSON
+	if err := register.parse(*request); err != nil {
+		if errors.Is(err, errLoginIsEmpty) || errors.Is(err, errPasswordIsEmpty) || errors.Is(err, errBodyIsEmpty) {
+			response.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		response.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if c.Depository.UserCheckExistLogin(register.Login) {
+		logger.Log.Info(fmt.Sprintf("login %s alredy exist", register.Login))
+		response.WriteHeader(http.StatusConflict)
+		return
+	}
+	userID, err := c.Depository.UserRegister(register.Login, register.Password)
+	if err != nil || userID < 1 {
+		logger.Log.Info(fmt.Sprintf("error registration user %s", register.Login))
+		response.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	logger.Log.Info(fmt.Sprintf("user %s is register", register.Login))
+	token, err := authorization.SetToken(userID)
+	if err != nil {
+		logger.Log.Info(fmt.Sprintf("error creating token for user %s", register.Login))
+		response.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	setAuthirizationCookie(response, token)
+	logger.Log.Info(fmt.Sprintf("user %s is logined", register.Login))
+	response.WriteHeader(http.StatusOK)
+}
+
+// user login handler
+func (c *Connect) UserLoginHandler(response http.ResponseWriter, request *http.Request) {
+	if !strings.Contains(request.Header.Get("Content-Type"), "application/json") {
+		response.WriteHeader(http.StatusBadRequest)
+	}
+	var loginUser userLoginJSON
+	if err := loginUser.parse(*request); err != nil {
+		logger.Log.WithError(err).Info("error json parsing")
+		if errors.Is(err, errLoginIsEmpty) || errors.Is(err, errPasswordIsEmpty) || errors.Is(err, errBodyIsEmpty) {
+			response.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		response.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	token, err := authorization.UserAuthorization(c.Depository, loginUser.Login, loginUser.Password)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			response.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		response.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	setAuthirizationCookie(response, token)
+	logger.Log.Info(fmt.Sprintf("user %s is logined", loginUser.Login))
+	response.WriteHeader(http.StatusOK)
 }
 
 // POST /api/user/orders
 // load user number order
-func (c *Connect) UserLoadOrdersHandler(responce http.ResponseWriter, request *http.Request) {
+func (c *Connect) UserLoadOrdersHandler(response http.ResponseWriter, request *http.Request) {
 	userID := request.Context().Value(KeyUserID)
 	if userID == nil || userID.(int) <= 0 {
-		responce.WriteHeader(http.StatusUnauthorized)
+		response.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	if !strings.Contains(request.Header.Get("Content-Type"), "text/plain") {
-		responce.WriteHeader(http.StatusBadRequest)
+		response.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	body, err := io.ReadAll(request.Body)
 	if err != nil {
 		logger.Log.WithError(err).Error("error reading http body")
-		responce.WriteHeader(http.StatusInternalServerError)
+		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	if len(body) <= 0 {
 		logger.Log.Info("order number cannot be empty")
-		responce.WriteHeader(http.StatusUnprocessableEntity)
+		response.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
 
 	order, err := strconv.Atoi(string(body))
 	if err != nil {
 		logger.Log.Info("wrong order format")
-		responce.WriteHeader(http.StatusUnprocessableEntity)
+		response.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
 
 	if !luhn.Valid(order) {
 		logger.Log.Info("wrong order format (is not Luhn)")
-		responce.WriteHeader(http.StatusUnprocessableEntity)
+		response.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
 
 	orderUserID, err := c.Depository.OrderUserCheck(order)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		responce.WriteHeader(http.StatusInternalServerError)
+		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if orderUserID > 0 {
 		if orderUserID == userID {
-			responce.WriteHeader(http.StatusOK)
+			response.WriteHeader(http.StatusOK)
 			return
 		}
-		responce.WriteHeader(http.StatusConflict)
+		response.WriteHeader(http.StatusConflict)
 		return
 	}
 
 	if c.Depository.OrderNew(userID.(int), order) {
-		responce.WriteHeader(http.StatusAccepted)
+		response.WriteHeader(http.StatusAccepted)
 		return
 	}
-	responce.WriteHeader(http.StatusInternalServerError)
+	response.WriteHeader(http.StatusInternalServerError)
 }
 
 // GET /api/user/orders
-func (c *Connect) UserGetOrdersHandler(responce http.ResponseWriter, request *http.Request) {
+func (c *Connect) UserGetOrdersHandler(response http.ResponseWriter, request *http.Request) {
 	userID := request.Context().Value(KeyUserID)
 	if userID == nil || userID.(int) <= 0 {
-		responce.WriteHeader(http.StatusUnauthorized)
+		response.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 	orders, err := c.Depository.OrderGetUserOrders(userID.(int))
 	if err != nil {
-		responce.WriteHeader(http.StatusInternalServerError)
+		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if len(orders) == 0 {
-		responce.WriteHeader(http.StatusNoContent)
+		response.WriteHeader(http.StatusNoContent)
 		return
 	}
 	body, err := json.Marshal(orders)
 	if err != nil {
 		logger.Log.WithError(err).Error("error JSON marshal")
-		responce.WriteHeader(http.StatusInternalServerError)
+		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	responce.Header().Add("Content-Type", "application/json")
-	responce.WriteHeader(http.StatusOK)
-	responce.Write(body)
+	response.Header().Add("Content-Type", "application/json")
+	response.WriteHeader(http.StatusOK)
+	response.Write(body)
 }
 
 // GET /api/user/balance
-func (c *Connect) UserGetBalanceHandler(responce http.ResponseWriter, request *http.Request) {
+func (c *Connect) UserGetBalanceHandler(response http.ResponseWriter, request *http.Request) {
 	userID := request.Context().Value(KeyUserID)
 	if userID == nil || userID.(int) <= 0 {
-		responce.WriteHeader(http.StatusUnauthorized)
+		response.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 	balance, err := c.Depository.UserGetBalance(userID.(int))
 	if err != nil {
-		responce.WriteHeader(http.StatusInternalServerError)
+		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	body, err := json.Marshal(balance)
 	if err != nil {
 		logger.Log.WithError(err).Error("error JSON marshal")
-		responce.WriteHeader(http.StatusInternalServerError)
+		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	responce.Header().Add("Content-Type", "application/json")
-	responce.WriteHeader(http.StatusOK)
-	responce.Write(body)
+	response.Header().Add("Content-Type", "application/json")
+	response.WriteHeader(http.StatusOK)
+	response.Write(body)
 }
 
 type withdrawal struct {
@@ -236,71 +252,71 @@ type withdrawal struct {
 }
 
 // POST /api/user/balance/withdraw
-func (c *Connect) UserGetBalanceWithdrawHandler(responce http.ResponseWriter, request *http.Request) {
+func (c *Connect) UserGetBalanceWithdrawHandler(response http.ResponseWriter, request *http.Request) {
 	userID := request.Context().Value(KeyUserID)
 	if userID == nil || userID.(int) <= 0 {
-		responce.WriteHeader(http.StatusUnauthorized)
+		response.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 	js, err := getBodyJs(*request)
 	if err != nil {
 		logger.Log.WithError(err).Info("body getting error")
-		responce.WriteHeader(http.StatusInternalServerError)
+		response.WriteHeader(http.StatusInternalServerError)
 	}
 	var w withdrawal
 	err = json.Unmarshal(js, &w)
 	if err != nil {
 		logger.Log.WithError(err).Info("json parsimg error")
-		responce.WriteHeader(http.StatusInternalServerError)
+		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	var order int
 	order, err = strconv.Atoi(w.Order)
 	if err != nil {
 		logger.Log.Info("wrong order format (is not number)")
-		responce.WriteHeader(http.StatusUnprocessableEntity)
+		response.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
 	if !luhn.Valid(order) {
 		logger.Log.Info("wrong order format (is not Luhn)")
-		responce.WriteHeader(http.StatusUnprocessableEntity)
+		response.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
 	err = c.Depository.UserWithdrawal(userID.(int), order, w.Sum)
 	if err != nil {
 		if errors.Is(err, depository.ErrInsufficientBalance) {
-			responce.WriteHeader(http.StatusPaymentRequired)
+			response.WriteHeader(http.StatusPaymentRequired)
 			return
 		}
-		responce.WriteHeader(http.StatusInternalServerError)
+		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	responce.WriteHeader(http.StatusOK)
+	response.WriteHeader(http.StatusOK)
 }
 
 // GET /api/user/withdrawals
-func (c *Connect) UserGetWithdrawalsHandler(responce http.ResponseWriter, request *http.Request) {
+func (c *Connect) UserGetWithdrawalsHandler(response http.ResponseWriter, request *http.Request) {
 	userID := request.Context().Value(KeyUserID)
 	if userID == nil || userID.(int) <= 0 {
-		responce.WriteHeader(http.StatusUnauthorized)
+		response.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 	withdrawals, err := c.Depository.UserGetWithdrawals(userID.(int))
 	if err != nil {
-		responce.WriteHeader(http.StatusInternalServerError)
+		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if len(withdrawals) == 0 {
-		responce.WriteHeader(http.StatusNoContent)
+		response.WriteHeader(http.StatusNoContent)
 		return
 	}
 	body, err := json.Marshal(withdrawals)
 	if err != nil {
 		logger.Log.WithError(err).Error("error JSON marshal")
-		responce.WriteHeader(http.StatusInternalServerError)
+		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	responce.Header().Add("Content-Type", "application/json")
-	responce.WriteHeader(http.StatusOK)
-	responce.Write(body)
+	response.Header().Add("Content-Type", "application/json")
+	response.WriteHeader(http.StatusOK)
+	response.Write(body)
 }

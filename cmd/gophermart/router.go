@@ -34,6 +34,7 @@ func (c *Connect) Route() chi.Router {
 	// Use all middleware-functions
 	c.Router.Use(c.CookieAuthorizationMiddleware)
 	c.Router.Use(compress.CompressHandler)
+	c.Router.Use(logger.ResponseLogging)
 
 	// Делаем маршрутизацию
 	c.Router.Route("/", func(r chi.Router) {

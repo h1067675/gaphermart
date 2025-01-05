@@ -10,17 +10,20 @@ import (
 
 func (c *Connect) CookieAuthorizationMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		logger.Log.Info("cookie is not found. User is not logged")
+
 		var (
 			err    error
 			userid int
 			cookie *http.Cookie
 			ctx    context.Context
 		)
-		logger.Log.Info("checking authorization")
+		logger.Log.Info("checking authorization cookies")
 		cookie, err = request.Cookie("token")
 		if err != nil {
-			logger.Log.Info("user is not logged")
+			logger.Log.Info("cookie is not found. User is not logged")
 		} else {
+			logger.Log.Info("checking authorization by token from getting cookie")
 			userid, err = authorization.CheckToken(cookie.Value)
 			if err != nil {
 				logger.Log.WithError(err).Error("user is not logged")
