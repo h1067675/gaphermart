@@ -65,6 +65,7 @@ func (s Storage) UserRegister(login string, pass string) (int, error) {
 			tx.Rollback()
 			return -1, err
 		}
+		tx.Commit()
 		return id, nil
 	}
 	return -1, err
