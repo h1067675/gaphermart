@@ -59,6 +59,7 @@ func (n *NetAddress) Set(s string) (err error) {
 		logger.Log.WithError(err).Info("error of set NetAdress")
 		return err
 	}
+	logger.Log.Info("getting value from flag - ", s)
 	return nil
 }
 
@@ -69,6 +70,7 @@ type DatabasePath struct {
 // Сохраняет значение переменной среды
 func (n *DatabasePath) Set(s string) (err error) {
 	n.Path = s
+	logger.Log.Info("getting value from flag - ", s)
 	return nil
 }
 
@@ -148,11 +150,14 @@ func (c *Config) EnvConfigSet() {
 	}
 	if envCnf.RunAddress != "" {
 		c.RunAddress.Set(envCnf.RunAddress)
+		logger.Log.Info("getting RunAddress from ENV - ", envCnf.RunAddress)
 	}
 	if envCnf.DatabaseURI != "" {
 		c.DatabaseURI.Set(envCnf.DatabaseURI)
+		logger.Log.Info("getting DatabaseURI from ENV - ", envCnf.DatabaseURI)
 	}
-	if envCnf.DatabaseURI != "" {
-		c.DatabaseURI.Set(envCnf.DatabaseURI)
+	if envCnf.AccrualSystemAddress != "" {
+		c.AccrualSystemAddress.Set(envCnf.AccrualSystemAddress)
+		logger.Log.Info("getting AccrualSystemAddress from ENV - ", envCnf.AccrualSystemAddress)
 	}
 }

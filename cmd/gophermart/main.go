@@ -27,7 +27,7 @@ func main() {
 	var connector = InitializeRouter(depositary, conf)
 	var loader = loader.InitializeLoader(depositary, conf.GetAccrualSystemAddress(), time.Second*5)
 	go loader.StartLoader()
-	logger.Info("loader is running")
+	logger.Info("loader is running. Outer server: ", loader.Server)
 	connector.StartServer()
 
 }
