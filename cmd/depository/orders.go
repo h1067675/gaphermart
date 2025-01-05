@@ -18,7 +18,7 @@ const (
 )
 
 type UserOrders struct {
-	Number     int     `json:"number"`
+	Number     string  `json:"number"`
 	Status     string  `json:"status"`
 	Accrual    float64 `json:"accrual,omitempty"`
 	UploadedAt RFCDate `json:"uploaded_at"`
