@@ -50,14 +50,12 @@ func (c *Connect) Route() chi.Router {
 			})
 			r.Route("/balance", func(r chi.Router) {
 				r.Get("/", c.UserGetBalanceHandler) // GET request for get user balance
+				r.Route("/withdraw", func(r chi.Router) {
+					r.Post("/", c.UserGetBalanceWithdrawHandler) // POST request for withdrawals to new order
+				})
 			})
 			r.Route("/withdrawals", func(r chi.Router) {
 				r.Get("/", c.UserGetWithdrawalsHandler) // GET request for get user withdrawals
-			})
-		})
-		r.Route("/api/user/balance", func(r chi.Router) {
-			r.Route("/withdraw", func(r chi.Router) {
-				r.Post("/", c.UserGetBalanceWithdrawHandler) // POST request for withdrawals to new order
 			})
 		})
 	})
