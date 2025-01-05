@@ -11,7 +11,7 @@ type Client struct {
 
 func (c *Client) GET(server string, endpoint string, order int) ([]byte, int, error) {
 	client := &http.Client{}
-	request, err := http.NewRequest(http.MethodGet, server+endpoint+strconv.Itoa(order), nil)
+	request, err := http.NewRequest(http.MethodGet, "http://"+server+endpoint+strconv.Itoa(order), nil)
 	if err != nil {
 		return nil, 0, err
 	}
