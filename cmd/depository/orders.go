@@ -114,7 +114,7 @@ func (s Storage) OrderGetOrdersInProcess() (orders []int, err error) {
 }
 
 func (s Storage) OrderStatusUpdate(order int, status string, accrual float64, tx *sql.Tx) (err error) {
-	_, err = tx.Exec("UPDATE orders SET status = $2, accrual = $3 WHERE Id = $1", order, status, accrual)
+	_, err = tx.Exec("UPDATE orders SET status = $2, accrual = $3 WHERE order_number = $1", order, status, accrual)
 	if err != nil {
 		logger.Log.WithError(err).Error("error updating the order in the database")
 		return err

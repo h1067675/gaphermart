@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -62,7 +63,7 @@ func (l Loader) updateOrder(chIn chan struct {
 }
 
 type responseCalculator struct {
-	Order   int     `json:"order"`
+	Order   string  `json:"order"`
 	Status  string  `json:"status"`
 	Accrual float64 `json:"accrual"`
 }
@@ -204,7 +205,14 @@ func (l Loader) getOrderStatusFromServerAPI(chDone chan struct{}, inChan chan st
 				var js responseCalculator
 				err := json.Unmarshal(body, &js)
 				if err != nil {
-					logger.Log.WithError(err).Error("json parsing error")
+					logger.Log.WithError(err).Error("loader: json parsing error")
+				}
+				order, err := strconv.Atoi(js.Order)
+				if err != nil {
+					logger.Log.WithError(err).Error("loader: order is not number")
+				}
+				if order != in.order {
+					logger.Log.Info("loader: order number from the external service does not match the internal number")
 				}
 				chResult <- struct {
 					order   int
