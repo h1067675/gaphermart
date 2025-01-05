@@ -16,7 +16,7 @@ type UserBalance struct {
 }
 
 type UserWithDrawals struct {
-	Order     int     `json:"order"`
+	Order     string  `json:"order"`
 	Sum       float64 `json:"sum"`
 	Processed RFCDate `json:"processed_at"`
 }
